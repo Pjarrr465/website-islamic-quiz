@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%2300215E'/%3E%3Cpath d='M40 14a19 19 0 1 0 0 36 15 15 0 1 1 0-36z' fill='%23FFD60A'/%3E%3C/svg%3E">
+  <title>Kuis Islami Ceria</title>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ========== HEADER ========== -->
+  <header class="topbar">
+    <div class="sky" id="sky"></div>
+    <div class="brand">
+      <div class="brand-moon" id="brand-moon"></div>
+      <div>
+        <h1>Kuis Islami Ceria</h1>
+        <p>Belajar jadi seru bersama teman-teman!</p>
+      </div>
+    </div>
+
+    <!-- Pemutar musik (logika di js/song.js) -->
+    <div class="music is-off hint" id="music">
+      <button id="music-toggle" class="music-toggle">
+        <svg class="ico-on" viewBox="0 0 24 24">
+          <path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/>
+          <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+          <path d="M18.5 5.5a9 9 0 0 1 0 13"/>
+        </svg>
+        <svg class="ico-off" viewBox="0 0 24 24">
+          <path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/>
+          <path d="m16 9 6 6"/>
+          <path d="m22 9-6 6"/>
+        </svg>
+      </button>
+      <span class="music-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <input id="music-vol" class="music-vol" type="range" min="0" max="1" step="0.05" value="0.5">
+      <button id="music-min" class="music-min">&minus;</button>
+      <button id="music-expand" class="music-expand">+</button>
+    </div>
+
+    <div class="stats" id="stats" hidden>
+      <div class="progress" title="Level yang sudah lulus">
+        <span id="progress-label">0 / 0 level</span>
+        <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+      </div>
+      <div class="score"><span>Poin</span> <strong id="score">0</strong></div>
+      <div class="user-box">
+        <span class="user-name" id="user-name"></span>
+        <button id="btn-logout" class="btn btn-small btn-logout">Keluar</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Layar pembuka: sambutan + menu Login / Daftar -->
+    <section id="screen-welcome" hidden>
+      <p class="welcome-ribbon">Selamat Datang di</p>
+      <h2 class="welcome-title" id="welcome-title">Kuis Ceria</h2>
+      <div class="welcome-menu">
+        <button id="go-login" class="btn btn-big">Login</button>
+        <button id="go-signup" class="btn btn-big btn-gold">Daftar</button>
+      </div>
+    </section>
+
+    <!-- Layar 1: masuk / daftar -->
+    <section id="screen-auth" hidden>
+      <div class="card auth-card">
+        <p class="arabic" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+        <h2 id="auth-title">Masuk ke Kuis Islami</h2>
+        <div class="auth-tabs">
+          <button id="tab-login" class="tab active">Masuk</button>
+          <button id="tab-signup" class="tab">Daftar</button>
+        </div>
+
+        <form id="form-login" class="auth-form">
+          <label>Username
+            <input id="login-username" type="text" required>
+          </label>
+          <label>Password
+            <input id="login-password" type="password" required>
+          </label>
+          <p id="login-error" class="form-error" hidden></p>
+          <button class="btn btn-primary" type="submit">Masuk</button>
+        </form>
+
+        <form id="form-signup" class="auth-form" hidden>
+          <label>Nama lengkap
+            <input id="signup-name" type="text" maxlength="40" required>
+          </label>
+          <label>Username <small>(huruf kecil, angka, atau _ ; minimal 3 karakter)</small>
+            <input id="signup-username" type="text" maxlength="20" required>
+          </label>
+          <label>Password <small>(minimal 6 karakter)</small>
+            <input id="signup-password" type="password" required>
+          </label>
+          <label>Ulangi password
+            <input id="signup-password2" type="password" required>
+          </label>
+          <p id="signup-error" class="form-error" hidden></p>
+          <button class="btn btn-primary" type="submit">Buat akun</button>
+        </form>
+
+        <p class="auth-note">Akun disimpan di browser ini saja (tanpa server).</p>
+        <button id="btn-welcome" class="btn btn-small btn-ghost">← Kembali ke awal</button>
+      </div>
+    </section>
+
+    <!-- Layar 2: daftar level -->
+    <section id="screen-map" hidden>
+      <div class="hero">
+        <p class="arabic" lang="ar" dir="rtl">اِقْرَأْ بِاسْمِ رَبِّكَ</p>
+        <h2 id="hero-title">Pilih level untuk mulai!</h2>
+        <p>Kumpulkan minimal 3 bintang untuk membuka level berikutnya.</p>
+      </div>
+      <div id="level-grid" class="level-grid"></div>
+      <div id="finish-banner" class="card finish-banner" hidden>
+        <h3>MasyaAllah, semua level selesai!</h3>
+        <p>Semoga ilmunya bermanfaat dan diamalkan.</p>
+      </div>
+    </section>
+
+    <!-- Layar 3: soal -->
+    <section id="screen-quiz" hidden>
+      <div class="quiz-head">
+        <button id="btn-back" class="btn btn-ghost">← Kembali</button>
+        <div>
+          <h2 id="quiz-title"></h2>
+          <p id="quiz-sub"></p>
+        </div>
+      </div>
+      <div id="questions"></div>
+
+      <div id="result" class="card result" hidden>
+        <div id="result-mascot" class="mascot"></div>
+        <div id="result-stars" class="result-stars"></div>
+        <h3 id="result-title"></h3>
+        <p id="result-text"></p>
+        <p id="result-count" class="result-count"></p>
+        <p id="result-note" class="result-note"></p>
+      </div>
+
+      <div class="actions">
+        <button id="btn-submit" class="btn btn-primary">Periksa jawaban</button>
+        <button id="btn-retry" class="btn btn-gold" hidden>Ulangi level</button>
+        <button id="btn-next" class="btn btn-primary" hidden>Kembali ke daftar level</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Hewan pixel yang berjalan -->
+  <div class="parade" id="parade"></div>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer">
+    <p>Creator: Fajar Cahya Bahtera [43050250022] &middot; Rullia Resty Handayani [43050250017]</p>
+    <button id="btn-reset" class="btn btn-small btn-danger" hidden>Hapus progres</button>
+  </footer>
+
+  <!-- Pop-up: muncul saat ikon musik diklik pertama kali -->
+  <div class="popup" id="popup" hidden>
+    <div class="card popup-box">
+      <p class="popup-text">Di antara hangatnya mi ayam dan dinginnya malam, aku menyadari bahwa tak semua yang terasa sempurna harus menjadi milik kita. Barangkali, mencintai adalah tentang mengagumi keindahan tanpa harus menggenggamnya, meski hati diam-diam berharap menjadi bagian darinya. salam dari kami, para pengabdi mie ayam.</p>
+      <div class="popup-photos">
+        <img src="foto1.jpeg" alt="Foto 1">
+        <img src="foto2.jpeg" alt="Foto 2">
+      </div>
+      <button id="popup-close" class="btn">Lanjut</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- Audio latar -->
+  <audio id="bgm" src="song1.mp3" loop></audio>
+
+  <script src="js/data.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/effects.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/song.js"></script>
+  <script src="js/popup.js"></script>
+</body>
+</html>
