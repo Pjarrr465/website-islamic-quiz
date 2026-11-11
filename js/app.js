@@ -29,6 +29,9 @@ function isDone(level) {
 function isUnlocked(level) {
   return level.id === 1 || isDone(LEVELS[level.id - 2]);   // level sebelumnya harus lulus
 }
+function isAccessed(level) {
+  return state.best[level.id] !== undefined;   // sudah pernah dikerjakan
+}
 function totalScore() {
   let sum = 0;
   Object.values(state.best).forEach((correct) => { sum += correct * SETTINGS.pointsPerCorrect; });
@@ -89,9 +92,9 @@ function showToast(message) {
   toastTimer = setTimeout(() => { toast.hidden = true; }, 2500);
 }
 
-// Tampilkan satu layar saja: "welcome", "auth", "map", atau "quiz"
+// Tampilkan satu layar saja: "welcome", "auth", "map", "profile", atau "quiz"
 function showScreen(name) {
-  ["welcome", "auth", "map", "quiz"].forEach((n) => { $("screen-" + n).hidden = n !== name; });
+  ["welcome", "auth", "map", "profile", "quiz"].forEach((n) => { $("screen-" + n).hidden = n !== name; });
   scrollTo({ top: 0 });
 }
 
@@ -124,6 +127,51 @@ function renderHeader() {
   $("score").textContent = totalScore().toLocaleString("id-ID");
   $("progress-label").textContent = done + " / " + LEVELS.length + " level";
   $("progress-fill").style.width = (done / LEVELS.length * 100) + "%";
+  renderUserPanel();
+}
+
+/* ---------- Panel user (klik ikon user) & halaman profil ---------- */
+const emailText = (user) => user.email || "Email belum diisi";
+
+function renderUserPanel() {
+  if (!state.user) return;
+  const user = readUsers()[state.user];
+  $("panel-name").textContent = user.name;
+  $("panel-email").textContent = emailText(user);
+  $("panel-levels").textContent = LEVELS.filter(isAccessed).length + " / " + LEVELS.length;
+  $("panel-score").textContent = totalScore().toLocaleString("id-ID");
+}
+
+function togglePanel(open) {
+  $("user-panel").hidden = !open;
+  $("user-btn").setAttribute("aria-expanded", open);
+}
+
+function renderProfile() {
+  const user = readUsers()[state.user];
+  $("profile-name").textContent = user.name;
+  $("profile-username").textContent = "@" + state.user;
+  $("profile-email").textContent = emailText(user);
+  $("profile-points").textContent = totalScore().toLocaleString("id-ID");
+  $("profile-accessed").textContent = LEVELS.filter(isAccessed).length + " / " + LEVELS.length;
+  $("profile-passed").textContent = LEVELS.filter(isDone).length + " / " + LEVELS.length;
+
+  const list = $("profile-levels");
+  list.innerHTML = "";
+  const accessed = LEVELS.filter(isAccessed);
+  if (accessed.length === 0) list.appendChild(el("li", "profile-empty", "Belum ada level yang dikerjakan."));
+  accessed.forEach((level) => {
+    const item = el("li", "profile-level");
+    item.appendChild(el("span", "", "Level " + level.id + " · " + level.topic + " (" + level.difficulty + ")"));
+    item.appendChild(el("span", "level-stars", stars(starsOf(level))));
+    list.appendChild(item);
+  });
+}
+
+function openProfile() {
+  togglePanel(false);
+  renderProfile();
+  showScreen("profile");
 }
 
 /* ---------- Layar daftar level ---------- */
@@ -238,7 +286,7 @@ function submitLevel() {
   // simpan hanya jika lebih baik dari nilai sebelumnya
   const before = state.best[level.id] || 0;
   const gained = Math.max(0, correct - before) * SETTINGS.pointsPerCorrect;
-  if (correct > before) state.best[level.id] = correct;
+  if (state.best[level.id] === undefined || correct > before) state.best[level.id] = correct;
   save();
   renderHeader();
   renderQuestions();
@@ -312,16 +360,17 @@ function enterApp(username) {
   state.best = (user.progress && user.progress.best) || {};
   localStorage.setItem(SETTINGS.sessionKey, username);
 
-  $("user-name").textContent = user.name;
   $("hero-title").textContent = "Assalamualaikum, " + user.name.split(" ")[0] + "! Pilih level untuk mulai";
   $("stats").hidden = false;
   $("btn-reset").hidden = false;
+  togglePanel(false);
   showScreen("map");
   renderMap();
 }
 
 function logout() {
   state.user = null;
+  togglePanel(false);
   localStorage.removeItem(SETTINGS.sessionKey);
   $("stats").hidden = true;
   $("btn-reset").hidden = true;
@@ -349,18 +398,20 @@ async function handleLogin(event) {
 async function handleSignup(event) {
   event.preventDefault();
   const name = $("signup-name").value.trim();
+  const email = $("signup-email").value.trim().toLowerCase();
   const username = $("signup-username").value.trim().toLowerCase();
   const password = $("signup-password").value;
   const users = readUsers();
 
   if (name.length < 2) return showError("signup-error", "Nama lengkap minimal 2 karakter.");
+  if (!/^\S+@\S+\.\S+$/.test(email)) return showError("signup-error", "Format email belum benar.");
   if (!/^[a-z0-9_]{3,20}$/.test(username)) return showError("signup-error", "Username 3-20 karakter: huruf kecil, angka, atau _.");
   if (users[username]) return showError("signup-error", "Username sudah dipakai, pilih yang lain.");
   if (password.length < 6) return showError("signup-error", "Password minimal 6 karakter.");
   if (password !== $("signup-password2").value) return showError("signup-error", "Konfirmasi password tidak sama.");
 
   const salt = randomSalt();
-  users[username] = { name: name, salt: salt, hash: await hashPassword(password, salt), progress: { best: {} } };
+  users[username] = { name: name, email: email, salt: salt, hash: await hashPassword(password, salt), progress: { best: {} } };
   writeUsers(users);
   showToast("Akun berhasil dibuat");
   enterApp(username);
@@ -389,6 +440,12 @@ $("tab-signup").addEventListener("click", () => switchTab("signup"));
 $("form-login").addEventListener("submit", handleLogin);
 $("form-signup").addEventListener("submit", handleSignup);
 $("btn-logout").addEventListener("click", logout);
+$("user-btn").addEventListener("click", () => togglePanel($("user-panel").hidden));
+$("btn-profile").addEventListener("click", openProfile);
+$("btn-profile-back").addEventListener("click", () => { showScreen("map"); renderMap(); });
+// klik di luar panel atau tekan Esc: panel ditutup
+document.addEventListener("click", (e) => { if (!$("user-menu").contains(e.target)) togglePanel(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") togglePanel(false); });
 const backToMap = () => { showScreen("map"); renderMap(); };
 $("btn-back").addEventListener("click", backToMap);
 $("btn-next").addEventListener("click", backToMap);
